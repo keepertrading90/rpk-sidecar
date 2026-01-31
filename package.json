@@ -1,0 +1,23 @@
+{
+    "name": "rpk-sidecar",
+    "version": "1.0.0",
+    "description": "RPK Producción - Sistema de Secuenciación con Arquitectura Sidecar",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "electron:dev": "electron .",
+        "backend": "cd src/backend && python engine.py"
+    },
+    "keywords": [
+        "rpk",
+        "produccion",
+        "secuenciacion",
+        "fastapi",
+        "electron"
+    ],
+    "author": "RPK S COOP",
+    "license": "MIT",
+    "devDependencies": {
+        "electron": "^28.2.0"
+    }
+}

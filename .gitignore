@@ -1,0 +1,70 @@
+# ========================================
+# RPK Sidecar - Git Ignore Configuration
+# ========================================
+
+# ----------------
+# Runtime & Dependencies (se regeneran automáticamente)
+# ----------------
+node_modules/
+runtime/
+runtime_python/
+
+# ----------------
+# Archivos temporales de instalación
+# ----------------
+python-embed.zip
+*.zip
+
+# ----------------
+# Logs y archivos de debug
+# ----------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ----------------
+# Archivos del sistema operativo
+# ----------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ----------------
+# IDEs y editores
+# ----------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ----------------
+# Archivos de compilación
+# ----------------
+dist/
+build/
+out/
+
+# ----------------
+# Variables de entorno (si las usas)
+# ----------------
+.env
+.env.local
+.env.*.local
+
+# ----------------
+# Cache
+# ----------------
+.cache/
+*.cache
+__pycache__/
+*.pyc
+*.pyo
+
+# ----------------
+# Datos Excel de producción (sensibles/locales)
+# ----------------
+*.xlsx
+*.xls
+data/

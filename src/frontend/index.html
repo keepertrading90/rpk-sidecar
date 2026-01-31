@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:*">
+    <title>RPK Producción - APS Sidecar</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <div class="loading-overlay hidden" id="loading-overlay">
+        <div class="spinner-container">
+            <div class="spinner"></div>
+            <p id="loading-text">Calculando Escenarios MRP...</p>
+        </div>
+    </div>
+
+    <header class="header">
+        <div class="header-brand">
+            <h1>🏭 RPK Producción <span class="version">v2.0 Sidecar</span></h1>
+        </div>
+        <div id="backend-status" class="status-indicator offline">
+            ● Desconectado
+        </div>
+    </header>
+
+    <div class="main-content">
+
+        <aside class="control-panel">
+            <h2>⚙️ Simulación</h2>
+
+            <div class="control-section">
+                <h3>📊 Escenario de Demanda</h3>
+                <label>Factor Saturación: <span id="val-saturation">1.0</span>x</label>
+                <input type="range" id="input-saturation" min="0.5" max="2.0" step="0.1" value="1.0">
+                <div class="stats-box">
+                    <p>Simula picos de demanda o caídas sin alterar datos reales.</p>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>🏭 Capacidad Productiva</h3>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="check-turno-extra">
+                    Activar Turno Extra (+8h)
+                </label>
+                <label for="input-horizonte">Horizonte (días):</label>
+                <input type="number" id="input-horizonte" min="7" max="90" value="30">
+            </div>
+
+            <div class="control-section">
+                <button id="btn-simulate" class="btn btn-primary">
+                    🔄 Recalcular MRP
+                </button>
+            </div>
+
+            <div class="control-section">
+                <h3>📂 Datos Base</h3>
+                <button id="btn-reload" class="btn btn-secondary">
+                    Recargar Excel
+                </button>
+                <div id="data-stats" class="stats-box hidden">
+                    <p>📋 Pedidos: <span id="stat-pedidos">0</span></p>
+                    <p>🛤️ Rutas: <span id="stat-rutas">0</span></p>
+                    <p>📦 Stock: <span id="stat-stock">0</span></p>
+                    <p>🔄 WIP: <span id="stat-wip">0</span></p>
+                </div>
+            </div>
+        </aside>
+
+        <main class="dashboard" id="dashboard-container">
+
+            <!-- KPIs -->
+            <div class="kpi-grid">
+                <div class="kpi-card urgent">
+                    <div class="kpi-icon">🔥</div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-urgentes">--</span>
+                        <span class="kpi-label">Artículos Urgentes</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card warning">
+                    <div class="kpi-icon">📊</div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-saturacion">--%</span>
+                        <span class="kpi-label">Saturación Media</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon">🏭</div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-cuellos">--</span>
+                        <span class="kpi-label">Cuellos de Botella</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon">📦</div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-total">--</span>
+                        <span class="kpi-label">Órdenes Generadas</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon">⏱️</div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-horas">--</span>
+                        <span class="kpi-label">Horas Totales</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon">🔧</div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-centros">--</span>
+                        <span class="kpi-label">Centros Activos</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Saturación por Centro -->
+            <div class="section-card">
+                <h3>📊 Saturación por Centro de Trabajo</h3>
+                <div id="chart-saturacion-container" class="chart-container">
+                    <span class="placeholder-text">Esperando datos de simulación...</span>
+                </div>
+            </div>
+
+            <!-- Cuellos de Botella -->
+            <div class="section-card cuellos-section">
+                <h3>⚠️ Cuellos de Botella</h3>
+                <div id="cuellos-container" class="cuellos-container">
+                    <div class="cuellos-status neutral">
+                        <span class="cuellos-icon">📊</span>
+                        <span class="cuellos-text">Ejecuta una simulación para analizar</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Secuencia de Producción -->
+            <div class="section-card">
+                <h3>📋 Secuencia de Producción (Top 100 Prioritarios)</h3>
+                <div class="table-container">
+                    <table id="table-secuencia">
+                        <thead>
+                            <tr>
+                                <th>Prioridad</th>
+                                <th>O.F.</th>
+                                <th>Artículo</th>
+                                <th>Centro</th>
+                                <th>Cantidad</th>
+                                <th>Estado</th>
+                                <th>Carga (h)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-secuencia-body">
+                            <tr>
+                                <td colspan="7" class="placeholder-text">
+                                    Ejecuta una simulación para ver la secuencia
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>
