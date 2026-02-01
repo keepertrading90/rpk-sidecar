@@ -11,6 +11,7 @@
 // Electron's built-in modules are available when running inside Electron
 // The npm 'electron' package just exports the path to the executable
 const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -126,8 +127,8 @@ function createWindow() {
         height: 900,
         minWidth: 1024,
         minHeight: 700,
-        icon: path.join(__dirname, 'assets', 'icon.png'),
-        backgroundColor: '#0a0e0d',
+        icon: path.join(__dirname, 'assets', 'icon_v1.png'),
+        backgroundColor: '#F7F7F7',
         webPreferences: {
             preload: path.join(__dirname, 'src', 'electron', 'preload.js'),
             nodeIntegration: false,

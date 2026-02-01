@@ -771,7 +771,7 @@ tbody tr:hover {
 }
 
 .badge-ok {
-    background: rgba(56, 142, 60, 0.15);
+    background: rgba(56, 142, 142, 0.15);
     color: var(--color-success);
 }
 
@@ -798,47 +798,4 @@ tbody tr:hover {
 ::-webkit-scrollbar-thumb {
     background: var(--rpk-gray-400);
     border-radius: var(--radius-sm);
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--rpk-accent);
-}
-
-/* ============================================
-   Responsive Adjustments
-   ============================================ */
-@media (max-width: 1024px) {
-    .main-content {
-        grid-template-columns: 260px 1fr;
-    }
-}
-
-@media (max-width: 768px) {
-    .main-content {
-        grid-template-columns: 1fr;
-    }
-    
-    .control-panel {
-        border-right: none;
-        border-bottom: 1px solid var(--rpk-gray-200);
-        padding: var(--space-md);
-    }
-    
-    .header {
-        padding: var(--space-sm) var(--space-md);
-    }
-    
-    .header-brand h1 {
-        font-size: 1rem;
-    }
-    
-    .kpi-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 480px) {
-    .kpi-grid {
-        grid-template-columns: 1fr;
-    }
 }
