@@ -12,6 +12,7 @@ Este módulo implementa:
 import sys
 import os
 import socket
+import threading
 from contextlib import closing
 from typing import Optional
 from datetime import datetime
@@ -33,6 +34,8 @@ from calculator import (
     identificar_cuellos_botella,
     simular_escenario
 )
+from db_manager import init_database, get_sync_status
+from file_watcher import start_watcher, stop_watcher, sync_all_excel_files
 
 
 # ============================================
@@ -53,6 +56,54 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Variable global para el observer del watcher
+watcher_observer = None
+
+
+# ============================================
+# EVENTOS DE CICLO DE VIDA
+# ============================================
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    Inicializa la base de datos SQLite y lanza el watcher de archivos.
+    Se ejecuta automáticamente al iniciar el servidor FastAPI.
+    """
+    global watcher_observer
+    
+    print("[STARTUP] Inicializando base de datos SQLite...")
+    init_database()
+    
+    # Determinar carpeta de datos
+    data_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'inputs')
+    data_path = os.path.abspath(data_path)
+    
+    print(f"[STARTUP] Iniciando File Watcher en: {data_path}")
+    
+    # Lanzar watcher en hilo separado (no bloqueante)
+    def run_watcher():
+        global watcher_observer
+        watcher_observer = start_watcher(data_path)
+    
+    watcher_thread = threading.Thread(target=run_watcher, daemon=True)
+    watcher_thread.start()
+    
+    print("[STARTUP] Sistema de sincronización automática activado")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """
+    Detiene el watcher al cerrar el servidor.
+    """
+    global watcher_observer
+    if watcher_observer:
+        print("[SHUTDOWN] Deteniendo File Watcher...")
+        stop_watcher(watcher_observer)
+        watcher_observer = None
+        print("[SHUTDOWN] File Watcher detenido")
 
 
 # ============================================
@@ -224,6 +275,27 @@ async def get_data_stats():
         "loaded": is_data_loaded(),
         "stats": stats
     }
+
+
+@app.get("/data/sync-status")
+async def get_data_sync_status():
+    """
+    Obtener el estado de sincronización SQLite.
+    Muestra última sincronización por tabla y conteos.
+    """
+    return get_sync_status()
+
+
+@app.post("/data/force-sync")
+async def force_sync_data():
+    """
+    Forzar sincronización de todos los archivos Excel a SQLite.
+    """
+    data_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'inputs')
+    data_path = os.path.abspath(data_path)
+    
+    result = sync_all_excel_files(data_path)
+    return result
 
 
 @app.get("/data/raw/{table_name}")

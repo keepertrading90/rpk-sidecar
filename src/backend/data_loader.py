@@ -15,6 +15,13 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
+# Import condicional de db_manager (puede no estar disponible en primera ejecución)
+try:
+    from db_manager import read_table, is_database_populated, get_sync_status as db_get_sync_status
+    DB_MANAGER_AVAILABLE = True
+except ImportError:
+    DB_MANAGER_AVAILABLE = False
+
 # ============================================
 # ALMACÉN DE DATOS EN MEMORIA (STATEFUL)
 # ============================================
@@ -397,12 +404,29 @@ def get_dataframe(name: str) -> pd.DataFrame:
     """
     Obtiene un DataFrame del almacén por nombre.
     
+    Prioridad de lectura:
+    1. SQLite (si está disponible y tiene datos)
+    2. DATA_STORE en memoria (fallback legacy)
+    
     Args:
         name: Nombre del DataFrame (pedidos, rutas_ops, stock, wip, puntos_lotes, capacidad_centros)
     
     Returns:
         DataFrame correspondiente o DataFrame vacío si no existe
     """
+    # Intentar desde SQLite primero
+    if DB_MANAGER_AVAILABLE:
+        try:
+            if is_database_populated(name):
+                df = read_table(name)
+                if not df.empty:
+                    # Actualizar también el DATA_STORE para consistencia
+                    DATA_STORE[name] = df
+                    return df
+        except Exception as e:
+            print(f"[LOAD] Error leyendo desde SQLite: {e}, usando memoria")
+    
+    # Fallback a memoria (legacy)
     return DATA_STORE.get(name, pd.DataFrame())
 
 
@@ -423,3 +447,70 @@ def reset_data_store():
         "load_time": None
     }
     print("[RESET] Almacen de datos reseteado")
+
+
+def load_from_database() -> Dict[str, Any]:
+    """
+    Carga todos los DataFrames desde SQLite a memoria.
+    Útil para warm-up inicial y sincronización.
+    
+    Returns:
+        Dict con estadísticas de carga
+    """
+    if not DB_MANAGER_AVAILABLE:
+        return {"status": "error", "message": "db_manager no disponible"}
+    
+    tables = ['pedidos', 'rutas_ops', 'stock', 'wip', 'puntos_lotes', 'capacidad_centros']
+    stats = {}
+    
+    for table in tables:
+        try:
+            df = read_table(table)
+            DATA_STORE[table] = df
+            stats[table] = len(df)
+        except Exception as e:
+            print(f"[LOAD] Error cargando {table} desde DB: {e}")
+            stats[table] = 0
+    
+    if any(v > 0 for v in stats.values()):
+        DATA_STORE["is_loaded"] = True
+        DATA_STORE["load_time"] = datetime.now().isoformat()
+        DATA_STORE["stats"] = stats
+    
+    return {
+        "status": "ok",
+        "source": "sqlite",
+        "stats": stats
+    }
+
+
+def get_data_source_info() -> Dict[str, Any]:
+    """
+    Obtiene información sobre la fuente de datos actual.
+    
+    Returns:
+        Dict con información de la fuente de datos
+    """
+    if DB_MANAGER_AVAILABLE:
+        try:
+            sync_status = db_get_sync_status()
+            return {
+                "primary_source": "sqlite",
+                "db_available": True,
+                "sync_status": sync_status,
+                "memory_loaded": DATA_STORE.get("is_loaded", False)
+            }
+        except Exception as e:
+            return {
+                "primary_source": "memory",
+                "db_available": False,
+                "error": str(e),
+                "memory_loaded": DATA_STORE.get("is_loaded", False)
+            }
+    else:
+        return {
+            "primary_source": "memory",
+            "db_available": False,
+            "memory_loaded": DATA_STORE.get("is_loaded", False)
+        }
+
